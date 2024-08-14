@@ -35,12 +35,20 @@
 		},
 		data() {
 			return {
-				form: {},
+				form: {
+					xq: [1, 2],
+					cccs: 123,
+					srk: '123123',
+					sex: 1,
+					age: 2,
+					textarea: '发来的激发山莨菪碱法律上电极法发来的激发山莨菪碱法律上电极法发来的激发山法律上\n111电极法发来的激发山莨菪碱法律上电极法发来的激发山莨菪碱法律上电极法发来的激发山莨菪碱法律上电极法'
+				},
 				//表单配置项
 				option: {
 				  labelWidth: '60',
 				  borderBottom: true,
 				  border: 'none',
+					// detail: false, // 是否详情页
 				  columns: [
 				    {
 				      placeholder: "请选择年龄段",
