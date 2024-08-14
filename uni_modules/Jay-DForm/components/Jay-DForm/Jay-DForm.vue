@@ -12,6 +12,7 @@
 						labelWidth: '45',
 						labelAlign: 'left',
 						labelStyle: {},
+            detail: true, // 是否详情页
 						columns: []
 					}
 				}
@@ -49,22 +50,28 @@
       // #ifdef VUE3
       modelValue: {
         handler() {
-          this.form = {
-            ...this.form,
-            ...this.modelValue
-          }
+          this.$nextTick(() => {
+            this.form = {
+              ...this.form,
+              ...this.modelValue
+            }
+          })
         },
+        immediate: true,
         deep: true
       },
       // #endif
       // #ifdef VUE2
       value: {
         handler() {
-          this.form = {
-            ...this.form,
-            ...this.value
-          }
+          this.$nextTick(() => {
+            this.form = {
+              ...this.form,
+              ...this.value
+            }
+          })
         },
+        immediate: true,
         deep: true
       }
       // #endif
@@ -141,6 +148,7 @@
           labelPosition: 'top',
           labelWidth: '45',
           labelAlign: 'left',
+          detail: false, // 是否详情页
           labelStyle: {},
         }
         const slots = this.$slots
@@ -156,8 +164,8 @@
 					}
 					if (item.rules) {
 						rules[item.prop] = item.rules
-            // 判断规则里是否有必填字段
-            if (item.rules) {
+            // 判断规则里是否有必填字段 并且非详情页
+            if (item.rules && !_option.detail) {
               // 数组形式
               if (Object.prototype.toString.call(item.rules) === "[object Array]") {
                 if (item.rules.some(rItem => rItem.required)) {
@@ -195,13 +203,32 @@
 					this.$refs.form.setRules(rules)
 				}, 20)
 			},
-			selectValue(value, list, keyName = 'label') {
-				if (value) {
-					return list.find(item => item.value === value)[keyName]
-				}
+			selectValue(value, list, keyName = 'label', comType) {
+        // 多选框
+        if (comType === 'checkbox') {
+          // 有可能数据，也有可能是逗号隔开的字符串
+          let _value = value
+          const str = []
+          if (Object.prototype.toString.call(value) !== '[object Array]') {
+            _value = value.split(',')
+          }
+          _value.forEach(v => {
+            const item = list.find(item => item.value === v)
+            if (item) {
+              str.push(item[keyName])
+            }
+          })
+          return str.join(',')
+        } else {
+          if (value) {
+            return list.find(item => item.value === value)[keyName]
+          }
+        }
+
 				return ''
 			},
 			showSelect(item) {
+        if (this.ops.detail) return // 详情页不触发
 				this.currentItem = item
 				this.pickerConfig = {
 					...this.pickerConfig,
@@ -310,139 +337,153 @@
       ref="form"
       :model="form"
     >
-			<template v-for="item in ops.columns">
-				<template v-if="item.type === 'select'">
-					<uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
-						<uv-input
-              class="disabled"
-              disabled
-              :border="item.border || option.border"
-              :value="selectValue(form[item.prop], item.dictData, item.keyName)"
-							:placeholder="`${item.placeholder || '请选择' + item.label}`"
-              v-bind="item"
-            >
-						</uv-input>
-						<template v-slot:right>
-							<uv-icon name="arrow-down-fill"></uv-icon>
-						</template>
-					</uv-form-item>
-				</template>
-
-				<template v-else-if="item.type === 'radio'">
-					<uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
-						<uv-radio-group v-model="form[item.prop]" @change="radioChange($event, item)">
-							<uv-radio v-for="(radioItem, radioIndex) in item.dictData" :key="radioIndex" :label="radioItem.label"
-								:name="radioItem.value" :customStyle="{marginLeft: '8px', marginBottom: '8px'}" />
-						</uv-radio-group>
-					</uv-form-item>
-				</template>
-
-				<template v-else-if="item.type === 'datetime'">
-					<uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
-            <uv-input
-              class="disabled"
-              :value="form[item.prop]" disabled
-              :placeholder="`${item.placeholder || '请选择' + item.label}`"
-              :border="item.border || option.border"
-              v-bind="item"
-            >
-            </uv-input>
-            <template v-slot:right>
-              <uv-icon name="arrow-down-fill"></uv-icon>
-            </template>
-					</uv-form-item>
-				</template>
-
-        <template v-else-if="item.type === 'calendar'">
-          <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
-            <uv-input
-              class="disabled"
-              disabled
-              :border="item.border || option.border"
-              :value="form[item.prop]"
-              :placeholder="`${item.placeholder || '请选择' + item.label}`"
-              v-bind="item"
-            >
-            </uv-input>
-            <template v-slot:right>
-              <uv-icon name="arrow-down-fill"></uv-icon>
-            </template>
-          </uv-form-item>
-        </template>
-
-        <template v-else-if="item.type === 'checkbox'">
+      <template v-if="ops.detail">
+        <template v-for="item in ops.columns">
           <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
-            <uv-checkbox-group :value="form[item.prop]" @change="checkboxChange($event, item)">
-              <uv-checkbox
-                :customStyle="{marginLeft: '8px', marginBottom: '8px'}"
-                v-for="(checkItem, checkIndex) in item.dictData"
-                :key="checkIndex"
-                :label="checkItem.label"
-                :name="checkItem.value"
-              ></uv-checkbox>
-            </uv-checkbox-group>
+            <view v-if="['select', 'radio', 'checkbox'].includes(item.type)">
+              {{selectValue(form[item.prop], item.dictData, item.keyName, item.type)}}
+            </view>
+            <view style="white-space: pre-wrap" v-else>
+              {{form[item.prop]}}
+            </view>
           </uv-form-item>
         </template>
-
-        <template v-else-if="item.type === 'textarea'">
-          <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
-            <uv-textarea
-              v-model="form[item.prop]"
-              v-bind="item"
-              :border="item.border || option.border"
-              :placeholder="`${item.placeholder || '请选择' + item.label}`"
-            />
-          </uv-form-item>
-        </template>
-        <template v-else-if="item.type === 'number'">
-          <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
-            <uv-input
-              class="disabled"
-              disabled
-              v-model="form[item.prop]"
-              :border="item.border || option.border"
-              :placeholder="`${item.placeholder || '请输入' + item.label}`"
-              v-bind="item"
-            />
-          </uv-form-item>
-        </template>
-
-        <template v-else-if="item.type === 'file'">
-          <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
-            <uv-upload
-              :fileList="form[item.prop]" :disabled="item.disabled" :accept="item.accept"
-              :capture="item.capture" :maxCount="item.maxCount" :sizeType="item.sizeType"
-              :compressed="item.compressed" :camera="item.camera" :multiple="item.multiple" :maxSize="item.maxSize"
-              :previewImage="item.previewImage" width="150rpx" height="150rpx" @afterRead="afterRead($event, item)"
-              @delete="deletePic($event, item)"
-            />
-          </uv-form-item>
-        </template>
-
-				<template v-else-if="item.type === 'input' || !item.type">
-					<uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
-            <template v-if="item.isSlot">
-              <slot :name="item.prop" />
-            </template>
-            <template v-else>
+      </template>
+      <template v-else>
+        <template v-for="item in ops.columns">
+          <template v-if="item.type === 'select'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
               <uv-input
-                :border="item.border || option.border"
-                v-model="form[item.prop]"
-                @input="updateParentValue"
-                v-bind="item"
-                :placeholder="`${item.placeholder || '请输入' + item.label}`"
+                  class="disabled"
+                  disabled
+                  :border="item.border || option.border"
+                  :value="selectValue(form[item.prop], item.dictData, item.keyName)"
+                  :placeholder="`${item.placeholder || '请选择' + item.label}`"
+                  v-bind="item"
               >
-                <template #prefix v-if="item.isPrefix">
-                  <slot :name="item.prefixName"></slot>
-                </template>
-                <template #suffix v-if="item.isSuffix">
-                  <slot :name="item.suffixName"></slot>
-                </template>
               </uv-input>
-            </template>
-					</uv-form-item>
-				</template>
-			</template>
+              <template v-slot:right>
+                <uv-icon name="arrow-down-fill"></uv-icon>
+              </template>
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'radio'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
+              <uv-radio-group v-model="form[item.prop]" @change="radioChange($event, item)">
+                <uv-radio v-for="(radioItem, radioIndex) in item.dictData" :key="radioIndex" :label="radioItem.label"
+                          :name="radioItem.value" :customStyle="{marginLeft: '8px', marginBottom: '8px'}" />
+              </uv-radio-group>
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'datetime'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
+              <uv-input
+                  class="disabled"
+                  :value="form[item.prop]" disabled
+                  :placeholder="`${item.placeholder || '请选择' + item.label}`"
+                  :border="item.border || option.border"
+                  v-bind="item"
+              >
+              </uv-input>
+              <template v-slot:right>
+                <uv-icon name="arrow-down-fill"></uv-icon>
+              </template>
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'calendar'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
+              <uv-input
+                  class="disabled"
+                  disabled
+                  :border="item.border || option.border"
+                  :value="form[item.prop]"
+                  :placeholder="`${item.placeholder || '请选择' + item.label}`"
+                  v-bind="item"
+              >
+              </uv-input>
+              <template v-slot:right>
+                <uv-icon name="arrow-down-fill"></uv-icon>
+              </template>
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'checkbox'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
+              <uv-checkbox-group :value="form[item.prop]" @change="checkboxChange($event, item)">
+                <uv-checkbox
+                    :customStyle="{marginLeft: '8px', marginBottom: '8px'}"
+                    v-for="(checkItem, checkIndex) in item.dictData"
+                    :key="checkIndex"
+                    :label="checkItem.label"
+                    :name="checkItem.value"
+                ></uv-checkbox>
+              </uv-checkbox-group>
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'textarea'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
+              <uv-textarea
+                  v-model="form[item.prop]"
+                  v-bind="item"
+                  :border="item.border || option.border"
+                  :placeholder="`${item.placeholder || '请选择' + item.label}`"
+              />
+            </uv-form-item>
+          </template>
+          <template v-else-if="item.type === 'number'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item" @click="showSelect(item)">
+              <uv-input
+                  class="disabled"
+                  disabled
+                  v-model="form[item.prop]"
+                  :border="item.border || option.border"
+                  :placeholder="`${item.placeholder || '请输入' + item.label}`"
+                  v-bind="item"
+              />
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'file'">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
+              <uv-upload
+                  :fileList="form[item.prop]" :disabled="item.disabled" :accept="item.accept"
+                  :capture="item.capture" :maxCount="item.maxCount" :sizeType="item.sizeType"
+                  :compressed="item.compressed" :camera="item.camera" :multiple="item.multiple" :maxSize="item.maxSize"
+                  :previewImage="item.previewImage" width="150rpx" height="150rpx" @afterRead="afterRead($event, item)"
+                  @delete="deletePic($event, item)"
+              />
+            </uv-form-item>
+          </template>
+
+          <template v-else-if="item.type === 'input' || !item.type">
+            <uv-form-item :label="item.label" :prop="item.prop" :borderBottom="option.borderBottom" v-bind="item">
+              <template v-if="item.isSlot">
+                <slot :name="item.prop" />
+              </template>
+              <template v-else>
+                <uv-input
+                    :border="item.border || option.border"
+                    v-model="form[item.prop]"
+                    @input="updateParentValue"
+                    v-bind="item"
+                    :placeholder="`${item.placeholder || '请输入' + item.label}`"
+                >
+                  <template #prefix v-if="item.isPrefix">
+                    <slot :name="item.prefixName"></slot>
+                  </template>
+                  <template #suffix v-if="item.isSuffix">
+                    <slot :name="item.suffixName"></slot>
+                  </template>
+                </uv-input>
+              </template>
+            </uv-form-item>
+          </template>
+        </template>
+      </template>
 
 		</uv-form>
 
