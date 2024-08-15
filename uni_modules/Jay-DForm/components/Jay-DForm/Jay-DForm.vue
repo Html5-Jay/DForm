@@ -1,341 +1,342 @@
 <script>
-	export default {
-		props: {
-			option: {
-				type: Object,
-				default: () => {
-					return {
-						rules: {},
-						errorType: 'message',
-						borderBottom: true,
-						labelPosition: 'top',
-						labelWidth: '45',
-						labelAlign: 'left',
-						labelStyle: {},
-            detail: true, // 是否详情页
-						columns: []
-					}
-				}
-			},
-      // #ifdef VUE3
-      modelValue: {
-        type: Object,
-        default: () => {
-          return {}
-        }
-      },
-      // #endif
-      // #ifdef VUE2
-      value: {
-        type: Object,
-        default: () => {
-          return {}
-        }
-      }
-      // #endif
-		},
-		data() {
-			return {
-				form: {},
-				currentItem: {}, // 当前操作的item
-        ops: {},
-				pickerConfig: {
-					title: '',
-					keyName: '',
-					columns: [],
-				}
-			}
-		},
-    watch: {
-      // #ifdef VUE3
-      modelValue: {
-        handler() {
-          this.$nextTick(() => {
-            this.form = {
-              ...this.form,
-              ...this.modelValue
-            }
-          })
-        },
-        immediate: true,
-        deep: true
-      },
-      // #endif
-      // #ifdef VUE2
-      value: {
-        handler() {
-          this.$nextTick(() => {
-            this.form = {
-              ...this.form,
-              ...this.value
-            }
-          })
-        },
-        immediate: true,
-        deep: true
-      }
-      // #endif
-
-    },
-		mounted() {
-			this.initForm()
-		},
-		computed: {
-		},
-		methods: {
-      deepClone(obj, cache = new WeakMap()) {
-        if (obj === null || typeof obj !== 'object') return obj;
-        if (cache.has(obj)) return cache.get(obj);
-        let clone;
-        if (obj instanceof Date) {
-          clone = new Date(obj.getTime());
-        } else if (obj instanceof RegExp) {
-          clone = new RegExp(obj);
-        } else if (obj instanceof Map) {
-          clone = new Map(Array.from(obj, ([key, value]) => [key, this.deepClone(value, cache)]));
-        } else if (obj instanceof Set) {
-          clone = new Set(Array.from(obj, value => this.deepClone(value, cache)));
-        } else if (Array.isArray(obj)) {
-          clone = obj.map(value => this.deepClone(value, cache));
-        } else if (Object.prototype.toString.call(obj) === '[object Object]') {
-          clone = Object.create(Object.getPrototypeOf(obj));
-          cache.set(obj, clone);
-          for (const [key, value] of Object.entries(obj)) {
-            clone[key] = this.deepClone(value, cache);
-          }
-        } else {
-          clone = Object.assign({}, obj);
-        }
-        cache.set(obj, clone);
-        return clone;
-      },
-
-			formatTime(timestamp, formatType) {
-				const date = new Date(timestamp);
-
-				if (isNaN(date)) {
-					return "Invalid Date";
-				}
-
-				let year = date.getFullYear();
-				let month = String(date.getMonth() + 1).padStart(2, "0");
-				let day = String(date.getDate()).padStart(2, "0");
-				let hours = String(date.getHours()).padStart(2, "0");
-				let minutes = String(date.getMinutes()).padStart(2, "0");
-				let seconds = String(date.getSeconds()).padStart(2, "0");
-
-				switch (formatType) {
-					case "date":
-						return `${year}-${month}-${day}`;
-					case "time":
-						return `${hours}:${minutes}`; //:${seconds}
-					case "year-month":
-						return `${year}-${month}`;
-					case "datetime":
-						return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-					default:
-						return "Invalid Format Type";
-				}
-			},
-			initForm() {
-				// console.log(this.option.columns, 'initForm')
-				const defaultForm = {}
-				const rules = {}
-        const _option = this.deepClone(this.option)
-        const defaultOps = {
+export default {
+  props: {
+    option: {
+      type: Object,
+      default: () => {
+        return {
+          rules: {},
           errorType: 'message',
           borderBottom: true,
           labelPosition: 'top',
           labelWidth: '45',
           labelAlign: 'left',
-          detail: false, // 是否详情页
           labelStyle: {},
+          detail: true, // 是否详情页
+          columns: []
         }
-        const slots = this.$slots
-        const slotsKeys = Object.keys(slots)
-				// 初始化字段
-        _option.columns.forEach(item => {
-					if (item.prop) {
-            if (['checkbox', 'file'].includes(item.type)) {
-              defaultForm[item.prop] = []
-            } else {
-              defaultForm[item.prop] = ''
-            }
-					}
-					if (item.rules) {
-						rules[item.prop] = item.rules
-            // 判断规则里是否有必填字段 并且非详情页
-            if (item.rules && !_option.detail) {
-              // 数组形式
-              if (Object.prototype.toString.call(item.rules) === "[object Array]") {
-                if (item.rules.some(rItem => rItem.required)) {
-                  item.required = true
-                }
-              }
-              if ( Object.prototype.toString.call(item.rules) === "[object Object]") {
-                if (item.rules.required) {
-                  item.required = true
-                }
-              }
-            }
-					}
-          /**
-           * 获取是否有插槽 目前文本框类型有前置 后置插槽
-           * type设置为input 或者没有设置默认是文本
-           */
-          if (item.type === 'input' || !item.type) {
-            slotsKeys.forEach(key => {
-              if (key === `${item.prop}Prefix`) {
-                item.isPrefix = true
-                item.prefixName = key
-              }
-              if (key === `${item.prop}Suffix`) {
-                item.isSuffix = true
-                item.suffixName = key
-              }
-            })
-          }
-				})
-				let form = Object.assign(defaultForm, this.value)
-				this.$set(this, 'form', form)
-        this.$set(this, 'ops', Object.assign(defaultOps, _option))
-				setTimeout(() => {
-					this.$refs.form.setRules(rules)
-				}, 20)
-			},
-			selectValue(value, list, keyName = 'label', comType) {
-        // 多选框
-        if (comType === 'checkbox') {
-          // 有可能数据，也有可能是逗号隔开的字符串
-          let _value = value
-          const str = []
-          if (Object.prototype.toString.call(value) !== '[object Array]') {
-            _value = value.split(',')
-          }
-          _value.forEach(v => {
-            const item = list.find(item => item.value === v)
-            if (item) {
-              str.push(item[keyName])
-            }
-          })
-          return str.join(',')
-        } else {
-          if (value) {
-            return list.find(item => item.value === value)[keyName]
-          }
-        }
-
-				return ''
-			},
-			showSelect(item) {
-        if (this.ops.detail) return // 详情页不触发
-				this.currentItem = item
-				this.pickerConfig = {
-					...this.pickerConfig,
-					title: item.pickerTitle || '',
-					keyName: item.keyName || 'label',
-					dictData: [item.dictData],
-				}
+      }
+    },
+    // #ifdef VUE3
+    modelValue: {
+      type: Object,
+      default: () => {
+        return {}
+      }
+    },
+    // #endif
+    // #ifdef VUE2
+    value: {
+      type: Object,
+      default: () => {
+        return {}
+      }
+    }
+    // #endif
+  },
+  data() {
+    return {
+      form: {},
+      currentItem: {}, // 当前操作的item
+      ops: {},
+      pickerConfig: {
+        title: '',
+        keyName: '',
+        columns: [],
+      }
+    }
+  },
+  watch: {
+    // #ifdef VUE3
+    modelValue: {
+      handler() {
         this.$nextTick(() => {
-          const ref = this.$refs[item.type]
-          if (Object.prototype.toString.call(ref) === '[object Array]') {
-            this.$refs[item.type][0].open()
-          } else {
-            this.$refs[item.type].open()
+          this.form = {
+            ...this.form,
+            ...this.modelValue
           }
         })
-			},
-			selectConfirm($event) {
-				if (this.currentItem.type === 'select') {
-					// todo 还要判断多选情况
-					this.form[this.currentItem.prop] = $event.value[0].value
-				}
-        this.updateParentValue()
-			},
-			selectClose() {
+      },
+      immediate: true,
+      deep: true
+    },
+    // #endif
+    // #ifdef VUE2
+    value: {
+      handler() {
+        this.$nextTick(() => {
+          this.form = {
+            ...this.form,
+            ...this.value
+          }
+        })
+      },
+      immediate: true,
+      deep: true
+    }
+    // #endif
 
-			},
-			radioChange(e, item) {
-        this.updateParentValue()
-			},
-      checkboxChange(e, item) {
-        console.log(e, item)
-        this.currentItem = item
-        this.form[item.prop] = e
-        this.updateParentValue()
-      },
-			datetimeConfirm($event) {
-        const item = this.currentItem
-        const formatValue = $event.mode === 'time' ? this.formatTime(this.getTimestampFromTime($event.value), $event
-            .mode) : this.formatTime($event.value, $event.mode)
-        this.form[item.prop] = item.returnTimestamp ? ($event.mode === 'time' ? this
-            .getTimestampFromTime($event.value) : $event.value) : formatValue; //是否返回时间搓
-        this.updateParentValue()
-			},
-      calendarConfirm($event) {
-        const item = this.currentItem
-        const dateString = $event.reduce((b, n) => (b + `,${n}`))
-        this.form[item.prop] = dateString
-        this.updateParentValue()
-      },
-      keyboardConfirm(e) {
-        console.log(e)
-      },
-      keyboardChange(value) {
-        const item = this.currentItem
-        this.form[item.prop] = `${this.form[item.prop]}${value}`
-        this.updateParentValue()
-      },
-      keyboardBackspace() {
-        // 删掉字符串最后一位
-        const item = this.currentItem
-        this.form[item.prop] = this.form[item.prop].slice(0, -1)
-        this.updateParentValue()
-      },
-			/**
-			 * validate 严格校验类型，需要指定type，比如type: 'number',
-			 */
-			submit() {
-				return this.$refs.form.validate()
-				// this.$refs.form.validate().then(res => {
-				//   console.log(res)
-				// }).catch(errors => {
-				//   console.log(errors)
-				// })
-			},
-			reset() {
-				this.$refs.form.resetFields()
-				this.$refs.form.clearValidate()
-			},
-      // 删除图片
-      deletePic($event, item) {
-        this.form[item.prop].splice($event.index, 1)
-        this.updateParentValue()
-      },
-      // 新增图片
-      afterRead($event, item) {
-        // 当设置 mutiple 为 true 时, file 为数组格式，否则为对象格式
-        const value = item.multiple ? $event.file : [$event.file]
-        this.form[item.prop] = value
-        this.updateParentValue()
-      },
-      updateParentValue() {
-        // #ifdef VUE3
-        this.$emit('update:modelValue', this.form)
-        // #endif
-        // #ifdef VUE2
-        this.$emit("input", this.form)
-        // #endif
+  },
+  mounted() {
+    this.initForm()
+  },
+  computed: {
+  },
+  methods: {
+    deepClone(obj, cache = new WeakMap()) {
+      if (obj === null || typeof obj !== 'object') return obj;
+      if (cache.has(obj)) return cache.get(obj);
+      let clone;
+      if (obj instanceof Date) {
+        clone = new Date(obj.getTime());
+      } else if (obj instanceof RegExp) {
+        clone = new RegExp(obj);
+      } else if (obj instanceof Map) {
+        clone = new Map(Array.from(obj, ([key, value]) => [key, this.deepClone(value, cache)]));
+      } else if (obj instanceof Set) {
+        clone = new Set(Array.from(obj, value => this.deepClone(value, cache)));
+      } else if (Array.isArray(obj)) {
+        clone = obj.map(value => this.deepClone(value, cache));
+      } else if (Object.prototype.toString.call(obj) === '[object Object]') {
+        clone = Object.create(Object.getPrototypeOf(obj));
+        cache.set(obj, clone);
+        for (const [key, value] of Object.entries(obj)) {
+          clone[key] = this.deepClone(value, cache);
+        }
+      } else {
+        clone = Object.assign({}, obj);
       }
-		}
-	}
+      cache.set(obj, clone);
+      return clone;
+    },
+
+    formatTime(timestamp, formatType) {
+      const date = new Date(timestamp);
+
+      if (isNaN(date)) {
+        return "Invalid Date";
+      }
+
+      let year = date.getFullYear();
+      let month = String(date.getMonth() + 1).padStart(2, "0");
+      let day = String(date.getDate()).padStart(2, "0");
+      let hours = String(date.getHours()).padStart(2, "0");
+      let minutes = String(date.getMinutes()).padStart(2, "0");
+      let seconds = String(date.getSeconds()).padStart(2, "0");
+
+      switch (formatType) {
+        case "date":
+          return `${year}-${month}-${day}`;
+        case "time":
+          return `${hours}:${minutes}`; //:${seconds}
+        case "year-month":
+          return `${year}-${month}`;
+        case "datetime":
+          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        default:
+          return "Invalid Format Type";
+      }
+    },
+    initForm() {
+      // console.log(this.option.columns, 'initForm')
+      const defaultForm = {}
+      const rules = {}
+      const _option = this.deepClone(this.option)
+      const defaultOps = {
+        errorType: 'message',
+        borderBottom: true,
+        labelPosition: 'top',
+        labelWidth: '45',
+        labelAlign: 'left',
+        labelStyle: {},
+        detail: false, // 是否详情页
+        border: 'none',
+      }
+      const slots = this.$slots
+      const slotsKeys = Object.keys(slots)
+      // 初始化字段
+      _option.columns.forEach(item => {
+        if (item.prop) {
+          if (['checkbox', 'file'].includes(item.type)) {
+            defaultForm[item.prop] = []
+          } else {
+            defaultForm[item.prop] = ''
+          }
+        }
+        if (item.rules) {
+          rules[item.prop] = item.rules
+          // 判断规则里是否有必填字段 并且非详情页
+          if (item.rules && !_option.detail) {
+            // 数组形式
+            if (Object.prototype.toString.call(item.rules) === "[object Array]") {
+              if (item.rules.some(rItem => rItem.required)) {
+                item.required = true
+              }
+            }
+            if ( Object.prototype.toString.call(item.rules) === "[object Object]") {
+              if (item.rules.required) {
+                item.required = true
+              }
+            }
+          }
+        }
+        /**
+         * 获取是否有插槽 目前文本框类型有前置 后置插槽
+         * type设置为input 或者没有设置默认是文本
+         */
+        if (item.type === 'input' || !item.type) {
+          slotsKeys.forEach(key => {
+            if (key === `${item.prop}Prefix`) {
+              item.isPrefix = true
+              item.prefixName = key
+            }
+            if (key === `${item.prop}Suffix`) {
+              item.isSuffix = true
+              item.suffixName = key
+            }
+          })
+        }
+      })
+      let form = Object.assign(defaultForm, this.value)
+      this.$set(this, 'form', form)
+      this.$set(this, 'ops', Object.assign(defaultOps, _option))
+      setTimeout(() => {
+        this.$refs.form.setRules(rules)
+      }, 20)
+    },
+    selectValue(value, list, keyName = 'label', comType) {
+      // 多选框
+      if (comType === 'checkbox') {
+        // 有可能数据，也有可能是逗号隔开的字符串
+        let _value = value
+        const str = []
+        if (Object.prototype.toString.call(value) !== '[object Array]') {
+          _value = value.split(',')
+        }
+        _value.forEach(v => {
+          const item = list.find(item => item.value === v)
+          if (item) {
+            str.push(item[keyName])
+          }
+        })
+        return str.join(',')
+      } else {
+        if (value) {
+          return list.find(item => item.value === value)[keyName]
+        }
+      }
+
+      return ''
+    },
+    showSelect(item) {
+      if (this.ops.detail) return // 详情页不触发
+      this.currentItem = item
+      this.pickerConfig = {
+        ...this.pickerConfig,
+        title: item.pickerTitle || '',
+        keyName: item.keyName || 'label',
+        dictData: [item.dictData],
+      }
+      this.$nextTick(() => {
+        const ref = this.$refs[item.type]
+        if (Object.prototype.toString.call(ref) === '[object Array]') {
+          this.$refs[item.type][0].open()
+        } else {
+          this.$refs[item.type].open()
+        }
+      })
+    },
+    selectConfirm($event) {
+      if (this.currentItem.type === 'select') {
+        // todo 还要判断多选情况
+        this.form[this.currentItem.prop] = $event.value[0].value
+      }
+      this.updateParentValue()
+    },
+    selectClose() {
+
+    },
+    radioChange(e, item) {
+      this.updateParentValue()
+    },
+    checkboxChange(e, item) {
+      console.log(e, item)
+      this.currentItem = item
+      this.form[item.prop] = e
+      this.updateParentValue()
+    },
+    datetimeConfirm($event) {
+      const item = this.currentItem
+      const formatValue = $event.mode === 'time' ? this.formatTime(this.getTimestampFromTime($event.value), $event
+          .mode) : this.formatTime($event.value, $event.mode)
+      this.form[item.prop] = item.returnTimestamp ? ($event.mode === 'time' ? this
+          .getTimestampFromTime($event.value) : $event.value) : formatValue; //是否返回时间搓
+      this.updateParentValue()
+    },
+    calendarConfirm($event) {
+      const item = this.currentItem
+      const dateString = $event.reduce((b, n) => (b + `,${n}`))
+      this.form[item.prop] = dateString
+      this.updateParentValue()
+    },
+    keyboardConfirm(e) {
+      console.log(e)
+    },
+    keyboardChange(value) {
+      const item = this.currentItem
+      this.form[item.prop] = `${this.form[item.prop]}${value}`
+      this.updateParentValue()
+    },
+    keyboardBackspace() {
+      // 删掉字符串最后一位
+      const item = this.currentItem
+      this.form[item.prop] = this.form[item.prop].slice(0, -1)
+      this.updateParentValue()
+    },
+    /**
+     * validate 严格校验类型，需要指定type，比如type: 'number',
+     */
+    submit() {
+      return this.$refs.form.validate()
+      // this.$refs.form.validate().then(res => {
+      //   console.log(res)
+      // }).catch(errors => {
+      //   console.log(errors)
+      // })
+    },
+    reset() {
+      this.$refs.form.resetFields()
+      this.$refs.form.clearValidate()
+    },
+    // 删除图片
+    deletePic($event, item) {
+      this.form[item.prop].splice($event.index, 1)
+      this.updateParentValue()
+    },
+    // 新增图片
+    afterRead($event, item) {
+      // 当设置 mutiple 为 true 时, file 为数组格式，否则为对象格式
+      const value = item.multiple ? $event.file : [$event.file]
+      this.form[item.prop] = value
+      this.updateParentValue()
+    },
+    updateParentValue() {
+      // #ifdef VUE3
+      this.$emit('update:modelValue', this.form)
+      // #endif
+      // #ifdef VUE2
+      this.$emit("input", this.form)
+      // #endif
+    }
+  }
+}
 </script>
 
 <template>
-	<view>
-		<uv-form
-      ref="form"
-      :model="form"
+  <view>
+    <uv-form
+        ref="form"
+        :model="form"
     >
       <template v-if="ops.detail">
         <template v-for="item in ops.columns">
@@ -485,14 +486,14 @@
         </template>
       </template>
 
-		</uv-form>
+    </uv-form>
 
     <uv-keyboard ref="number" mode="number" :showCancel="false" :showConfirm="false" :dotDisabled="currentItem.dotDisabled" @confirm="keyboardConfirm" @change="keyboardChange" @backspace="keyboardBackspace" />
     <uv-calendar ref="calendar" v-bind="currentItem" @confirm="calendarConfirm" />
     <uv-datetime-picker v-if="currentItem.type === 'datetime'" ref="datetime" :value="form[currentItem.prop]" :mode="currentItem.mode" @confirm="datetimeConfirm" />
-		<uv-picker safeAreaInsetBottom ref="select" :title="pickerConfig.title" :keyName="pickerConfig.keyName"
-			:columns="pickerConfig.dictData" @confirm="selectConfirm($event)" @close="selectClose" />
-	</view>
+    <uv-picker safeAreaInsetBottom ref="select" :title="pickerConfig.title" :keyName="pickerConfig.keyName"
+               :columns="pickerConfig.dictData" @confirm="selectConfirm($event)" @close="selectClose" />
+  </view>
 </template>
 
 <style scoped lang="scss">
