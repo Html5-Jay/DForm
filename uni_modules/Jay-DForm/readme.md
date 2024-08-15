@@ -1,269 +1,30 @@
 ## 基于uv-ui的配置化表单库
 
 > 该库默认使用的UI库为 uv-ui
-> 
+>
 > 具体配置以及表单属性方法请参考 [官方链接](https://www.uvui.cn/components/input.html)
-> 
-### 使用方式
-```vue
-<template>
-  <view class="content">
-    <da-form ref="daForm" v-model="form" :option="option">
-      <template #cccs>
-        <uv-input style="width: 200px" v-model="form['cccs']" placeholder="cccsss" />
-      </template>
-      <template #srkSuffix>
-        <uv-code
-            ref="uCode"
-            seconds="20"
-            changeText="X秒重新获取哈哈哈"
-        ></uv-code>
-        <uv-button
-            text="tips"
-            type="success"
-            size="mini"
-        ></uv-button>
-      </template>
-      <template #srkPrefix>
-        <view>111123123</view>
-      </template>
-    </da-form>
-    <view class="btn-list">
-      <uv-button type="primary" @click="submit">提交表单</uv-button>
-      <uv-button @click="reset">重置表单</uv-button>
-    </view>
-  </view>
-</template>
 
-<script>
-  import DaForm from '../../components/da-form/index.vue'
-  export default {
-    components: {
-      DaForm
-    },
-    data() {
-      return {
-        form: {},
-        //表单配置项
-        option: {
-          labelWidth: '60',
-          borderBottom: true,
-          border: 'none',
-          columns: [
-            {
-              placeholder: "请选择年龄段",
-              label: "年龄",
-              type: "radio",
-              prop: 'age',
-              dictData: [
-                {
-                  value: 2,
-                  label: "16~20岁",
-                },
-                {
-                  value: 3,
-                  label: "21~25岁",
-                },
-                {
-                  value: 4,
-                  label: "26~30岁",
-                },
-              ],
-              rules: [
-                {
-                  type: 'number',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-            {
-              label: "插槽测试",
-              prop: 'cccs',
-              isSlot: true
-            },
-            {
-              label: "输入框",
-              prop: 'srk',
-            },
-            {
-              label: "获客时间",
-              type: "datetime",
-              prop: 'time',
-              mode: 'datetime', //	date为日期选择，time为时间选择，year-month为年月选择 ,datetime日期时间选择
-              returnTimestamp: false, //value值是否返回时间搓格式
-              rules: [
-                {
-                  // type: 'number',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-            {
-              placeholder: "请选择兴趣",
-              label: "兴趣",
-              type: "checkbox",
-              prop: 'xq',
-              dictData: [{
-                value: 1,
-                label: "篮球",
-                disabled: true, //是否禁用
-              },
-                {
-                  value: 2,
-                  label: "足球",
-                },
-                {
-                  value: 3,
-                  label: "羽毛球",
-                },
-                {
-                  value: 4,
-                  label: "唱歌",
-                },
-                {
-                  value: 5,
-                  label: "街舞",
-                },
-              ],
-              rules: [
-                {
-                  type: 'array',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-            {
-              placeholder: "选择日期",
-              label: "日期",
-              prop: 'date',
-              type: "calendar",
-              mode: 'range', //	mode为single只能选择单个日期 为multiple可以选择多个日期为range可以选择日期范围
-              returnTimestamp: false, //value值是否返回时间搓格式
-              rules: [
-                {
-                  // type: 'number',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-            {
-              placeholder: "(例如：前端、后端)",
-              label: "经历",
-              prop: 'textarea',
-              type: "textarea",
-              count: true,
-              rules: [
-                {
-                  // type: 'number',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-            {
-              label: "数字键盘",
-              prop: 'number',
-              type: "number",
-              dotDisabled: true,
-              rules: [
-                {
-                  type: 'string',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
 
-            {
-              label: "性别",
-              // pickerTitle: '性别1',
-              type: "select",
-              prop: 'sex',
-              border: 'bottom',
-              dictData: [{
-                value: 1,
-                label: "男",
-              },
-                {
-                  value: 2,
-                  label: "女",
-                },
-              ],
-              rules: [
-                {
-                  type: 'number',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-            {
-              label: "孩子头像 ",
-              type: "file",
-              prop: 'file',
-              maxCount: 1, //最大选择图片的数量
-              multiple: false, //是否开启图片多选，部分安卓机型不支持  false	true
-              accept: 'image', //接受的文件类型，file只支持H5（只有微信小程序才支持把accept配置为all、media）  可选 all | media | image | file | video
-              capture: ['album', 'camera'], // 图片或视频拾取模式，当accept为image类型时设置capture可选额外camera可以直接调起摄像头 String | Array
-              sizeType: ['original', 'compressed'], //original 原图，compressed 压缩图，默认二者都有，H5无效
-              compressed: true, //当accept为video时生效，是否压缩视频，默认为true  Boolean	true	false
-              camera: 'back', //当accept为video时生效，可选值为back或front  	String	back	-
-              maxSize: Number.MAX_VALUE, // 选择单个文件的最大大小，单位B(byte)，默认不限制	String | Number
-              previewImage: true, //是否在上传完成后展示预览图	Boolean	true	false
-              disabled: false, //是否禁用
-              rules: [
-                {
-                  type: 'array',
-                  required: true,
-                  message: '此为必填字段',
-                  trigger: ['blur', 'change']
-                }
-              ],
-            },
-          ]
-        },
-      };
-    },
-    methods: {
-      // 提交表单
-      submit() {
-        // this.$refs.daForm.submit()
-        this.$refs.daForm.submit().then(res => {
-          console.log('success')
-        }).catch(error => {
-          console.log(error)
-        })
-      },
-      //重置表单
-      reset() {
-        this.$refs.daForm.reset()
-      }
-    },
-  };
-</script>
+### 字段说明
+#### option 除了以下属性外，其余与uv-ui form表单属性一致
+| 字段      | 类型      | 默认值   | 说明                                               |
+|---------|---------|-------|--------------------------------------------------|
+| value / v-model  | Object  | -     | 绑定表单值                                            |
+| border  | String  | none  | 全局配置input边框类型，surround-四周边框，bottom-底部边框，none-无边框 |
+| columns | Array   | []    | 表单字段配置列表                                         |
+| detail  | Boolean | false | 是否详情页                                            |
 
-<style lang="scss">
-  .content{
-    padding: 32rpx;
-  }
-</style>
-```
-### 特殊说明
-> option 参数同ui-ui Form Props一致，额外增加了columns属性，用于配置表单项，border属性用于全局配置input的边框属性
-> 
-> columns 为表单项，其中prop与type为必填项，prop表示表单对应的字段，type为表单渲染组件类型，dictData为字典数据，rules为校验规则，isSlot为是否为插槽
-> 
-> columns 中type类型有radio、checkbox、select、datetime、calendar、textarea、number、file、input，默认渲染input
-> 
-> this.$refs.daForm.submit() 校验规则；this.$refs.daForm.reset() 重置表单
+#### column
+| 字段     | 类型              | 默认值   | 说明                                                                                     |
+|--------|-----------------|-------|----------------------------------------------------------------------------------------|
+| prop   | String          | -     | 表单字段                                                                                   |
+| type   | String          | input | 表单渲染组件类型，有radio、checkbox、select、datetime、calendar、textarea、number、file、input，默认渲染input |
+| dictData | Array           | []    | dictData为字典数据，格式为{label: '展示值', value: '选中值'}                                          |
+| rules | Array \| Object | -     | 校验规则                                                                                   |
+| isSlot | Boolean         | false | 是否为插槽                                                                                  |
+
+#### method
+| 方法名 | 说明 |
+|--------|---------|
+| submit | 提交表单 |
+| reset  | 重置表单 |
